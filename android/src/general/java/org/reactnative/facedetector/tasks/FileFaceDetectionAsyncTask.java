@@ -22,6 +22,8 @@ import com.google.android.gms.vision.face.Face;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets
+import java.util.Base64;
 
 public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, SparseArray<Face>> {
   private static final String ERROR_TAG = "E_FACE_DETECTION_FAILED";
@@ -41,6 +43,7 @@ public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, SparseArra
   private RNFaceDetector mRNFaceDetector;
 
   public FileFaceDetectionAsyncTask(Context context, ReadableMap options, Promise promise) {
+    mIsBase64 = options.getString("format") == "base64";
     mUri = options.getString("uri");
     mPromise = promise;
     mOptions = options;
@@ -55,28 +58,30 @@ public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, SparseArra
       return;
     }
 
-    Uri uri = Uri.parse(mUri);
-    mPath = uri.getPath();
+    if (!mIsBase64) {
+      Uri uri = Uri.parse(mUri);
+      mPath = uri.getPath();
 
-    if (mPath == null) {
-      mPromise.reject(ERROR_TAG, "Invalid URI provided: `" + mUri + "`.");
-      cancel(true);
-      return;
-    }
+      if (mPath == null) {
+        mPromise.reject(ERROR_TAG, "Invalid URI provided: `" + mUri + "`.");
+        cancel(true);
+        return;
+      }
 
-    // We have to check if the requested image is in a directory safely accessible by our app.
-    boolean fileIsInSafeDirectories =
-          mPath.startsWith(mContext.getCacheDir().getPath()) || mPath.startsWith(mContext.getFilesDir().getPath());
+      // We have to check if the requested image is in a directory safely accessible by our app.
+      boolean fileIsInSafeDirectories =
+            mPath.startsWith(mContext.getCacheDir().getPath()) || mPath.startsWith(mContext.getFilesDir().getPath());
 
-    if (!fileIsInSafeDirectories) {
-      mPromise.reject(ERROR_TAG, "The image has to be in the local app's directories.");
-      cancel(true);
-      return;
-    }
+      if (!fileIsInSafeDirectories) {
+        mPromise.reject(ERROR_TAG, "The image has to be in the local app's directories.");
+        cancel(true);
+        return;
+      }
 
-    if(!new File(mPath).exists()) {
-      mPromise.reject(ERROR_TAG, "The file does not exist. Given path: `" + mPath + "`.");
-      cancel(true);
+      if(!new File(mPath).exists()) {
+        mPromise.reject(ERROR_TAG, "The file does not exist. Given path: `" + mPath + "`.");
+        cancel(true);
+      }
     }
   }
 
@@ -87,13 +92,23 @@ public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, SparseArra
     }
 
     mRNFaceDetector = detectorForOptions(mOptions, mContext);
-    Bitmap bitmap = BitmapFactory.decodeFile(mPath);
+    Bitmap bitmap;
+    if (mIsBase64) {
+      byte [ ] base64Bytes = Base64.getDecoder().decode(mUri.getBytes(StandardCharsets.UTF_8));
+
+      bitmap = BitmapFactory.decodeByteArray(base64Bytes, 0, base64Bytes.length);
+    }
+    else {
+      bitmap = BitmapFactory.decodeFile(mPath);
+    }
     mWidth = bitmap.getWidth();
     mHeight = bitmap.getHeight();
 
     try {
-      ExifInterface exif = new ExifInterface(mPath);
-      mOrientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
+      if (!mIsBase64) {
+        ExifInterface exif = new ExifInterface(mPath);
+        mOrientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
+      }
     } catch (IOException e) {
       Log.e(ERROR_TAG, "Reading orientation from file `" + mPath + "` failed.", e);
     }

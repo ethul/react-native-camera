@@ -44,20 +44,33 @@ RCT_EXPORT_METHOD(detectFaces:(nonnull NSDictionary *)options
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
+    BOOL isBase64 = options[@"format"] == @"base64";
+
     NSString *uri = options[@"uri"];
     if (uri == nil) {
         reject(@"E_FACE_DETECTION_FAILED", @"You must define a URI.", nil);
         return;
     }
     
-    NSURL *url = [NSURL URLWithString:uri];
-    NSString *path = [url.path stringByStandardizingPath];
-    
     @try {
-        if (![fileManager fileExistsAtPath:path]) {
-            reject(@"E_FACE_DETECTION_FAILED", [NSString stringWithFormat:@"The file does not exist. Given path: `%@`.", path], nil);
-            return;
+        UIImage *image = nil;
+
+        if (isBase64) {
+          NSData *base64Data = [[NSData alloc]initWithBase64EncodedString:uri options:NSDataBase64DecodingIgnoreUnknownCharacters];
+          image = [[UIImage alloc] imageWithData:base64Data];
         }
+        else {
+          NSURL *url = [NSURL URLWithString:uri];
+          NSString *path = [url.path stringByStandardizingPath];
+          if (![fileManager fileExistsAtPath:path]) {
+              reject(@"E_FACE_DETECTION_FAILED", [NSString stringWithFormat:@"The file does not exist. Given path: `%@`.", path], nil);
+              return;
+          }
+          else {
+            image = [[UIImage alloc] initWithContentsOfFile:path];
+          }
+        }
+    
         FIRVisionFaceDetectorOptions *newOptions = [[FIRVisionFaceDetectorOptions alloc] init];
         if (options[kDetectLandmarksOptionName]) {
             newOptions.landmarkMode = [options[kDetectLandmarksOptionName] integerValue];
@@ -71,7 +84,6 @@ RCT_EXPORT_METHOD(detectFaces:(nonnull NSDictionary *)options
             newOptions.classificationMode = [options[kRunClassificationsOptionName] integerValue];
         }
 
-        UIImage *image = [[UIImage alloc] initWithContentsOfFile:path];
         UIImage *rotatedImage = [RNImageUtils forceUpOrientation:image];
 
         Class faceDetectorManagerClassMlkit = NSClassFromString(@"FaceDetectorManagerMlkit");

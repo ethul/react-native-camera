@@ -5,6 +5,8 @@ import android.support.media.ExifInterface;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.util.Log;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 
 import org.reactnative.facedetector.RNFaceDetector;
 import org.reactnative.facedetector.FaceDetectorUtils;
@@ -16,11 +18,14 @@ import com.facebook.react.bridge.WritableMap;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
+import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata;
 import com.google.firebase.ml.vision.face.FirebaseVisionFace;
 import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetector;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 
 public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, Void> {
@@ -30,6 +35,7 @@ public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, Void> {
   private static final String DETECT_LANDMARKS_OPTION_KEY = "detectLandmarks";
   private static final String RUN_CLASSIFICATIONS_OPTION_KEY = "runClassifications";
 
+  private boolean mIsBase64 = false;
   private String mUri;
   private String mPath;
   private Promise mPromise;
@@ -41,6 +47,7 @@ public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, Void> {
   private RNFaceDetector mRNFaceDetector;
 
   public FileFaceDetectionAsyncTask(Context context, ReadableMap options, Promise promise) {
+    mIsBase64 = options.getString("format") == "base64";
     mUri = options.getString("uri");
     mPromise = promise;
     mOptions = options;
@@ -55,28 +62,30 @@ public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, Void> {
       return;
     }
 
-    Uri uri = Uri.parse(mUri);
-    mPath = uri.getPath();
+    if (!mIsBase64) {
+      Uri uri = Uri.parse(mUri);
+      mPath = uri.getPath();
 
-    if (mPath == null) {
-      mPromise.reject(ERROR_TAG, "Invalid URI provided: `" + mUri + "`.");
-      cancel(true);
-      return;
-    }
+      if (mPath == null) {
+        mPromise.reject(ERROR_TAG, "Invalid URI provided: `" + mUri + "`.");
+        cancel(true);
+        return;
+      }
 
-    // We have to check if the requested image is in a directory safely accessible by our app.
-    boolean fileIsInSafeDirectories =
-          mPath.startsWith(mContext.getCacheDir().getPath()) || mPath.startsWith(mContext.getFilesDir().getPath());
+      // We have to check if the requested image is in a directory safely accessible by our app.
+      boolean fileIsInSafeDirectories =
+            mPath.startsWith(mContext.getCacheDir().getPath()) || mPath.startsWith(mContext.getFilesDir().getPath());
 
-    if (!fileIsInSafeDirectories) {
-      mPromise.reject(ERROR_TAG, "The image has to be in the local app's directories.");
-      cancel(true);
-      return;
-    }
+      if (!fileIsInSafeDirectories) {
+        mPromise.reject(ERROR_TAG, "The image has to be in the local app's directories.");
+        cancel(true);
+        return;
+      }
 
-    if(!new File(mPath).exists()) {
-      mPromise.reject(ERROR_TAG, "The file does not exist. Given path: `" + mPath + "`.");
-      cancel(true);
+      if(!new File(mPath).exists()) {
+        mPromise.reject(ERROR_TAG, "The file does not exist. Given path: `" + mPath + "`.");
+        cancel(true);
+      }
     }
   }
 
@@ -96,7 +105,17 @@ public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, Void> {
     }
 
     try {
-      FirebaseVisionImage image = FirebaseVisionImage.fromFilePath(mContext, Uri.parse(mUri));
+      FirebaseVisionImage image;
+      if (mIsBase64) {
+        byte [ ] base64Bytes = Base64.getDecoder().decode(mUri.getBytes(StandardCharsets.UTF_8));
+
+        Bitmap base64Bitmap = BitmapFactory.decodeByteArray(base64Bytes, 0, base64Bytes.length);
+
+        image = FirebaseVisionImage.fromBitmap(base64Bitmap);
+      }
+      else {
+        image = FirebaseVisionImage.fromFilePath(mContext, Uri.parse(mUri));
+      }
       FirebaseVisionFaceDetector detector = mRNFaceDetector.getDetector();
       detector.detectInImage(image)
               .addOnSuccessListener(

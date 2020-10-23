@@ -44,7 +44,7 @@ RCT_EXPORT_METHOD(detectFaces:(nonnull NSDictionary *)options
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
-    BOOL isBase64 = options[@"format"] == @"base64";
+    BOOL isBase64 = [options[@"format"]  isEqual: @"base64"];
 
     NSString *uri = options[@"uri"];
     if (uri == nil) {
@@ -57,7 +57,7 @@ RCT_EXPORT_METHOD(detectFaces:(nonnull NSDictionary *)options
 
         if (isBase64) {
           NSData *base64Data = [[NSData alloc]initWithBase64EncodedString:uri options:NSDataBase64DecodingIgnoreUnknownCharacters];
-          image = [[UIImage alloc] imageWithData:base64Data];
+          image = [UIImage imageWithData:base64Data];
         }
         else {
           NSURL *url = [NSURL URLWithString:uri];

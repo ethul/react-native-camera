@@ -4,6 +4,7 @@ import android.content.Context;
 import android.support.media.ExifInterface;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.util.Base64;
 import android.util.Log;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -25,7 +26,6 @@ import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetector;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.List;
 
 public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, Void> {
@@ -111,7 +111,7 @@ public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, Void> {
     try {
       FirebaseVisionImage image;
       if (mIsBase64) {
-        byte [ ] base64Bytes = Base64.getDecoder().decode(mUri.getBytes(StandardCharsets.UTF_8));
+        byte [ ] base64Bytes = Base64.decode(mUri.getBytes(StandardCharsets.UTF_8), Base64.DEFAULT);
 
         Bitmap base64Bitmap = BitmapFactory.decodeByteArray(base64Bytes, 0, base64Bytes.length);
 

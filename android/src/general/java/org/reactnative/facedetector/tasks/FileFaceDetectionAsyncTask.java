@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory;
 import android.support.media.ExifInterface;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.util.Base64;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -23,7 +24,6 @@ import com.google.android.gms.vision.face.Face;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets
-import java.util.Base64;
 
 public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, SparseArray<Face>> {
   private static final String ERROR_TAG = "E_FACE_DETECTION_FAILED";
@@ -96,7 +96,7 @@ public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, SparseArra
     mRNFaceDetector = detectorForOptions(mOptions, mContext);
     Bitmap bitmap;
     if (mIsBase64) {
-      byte [ ] base64Bytes = Base64.getDecoder().decode(mUri.getBytes(StandardCharsets.UTF_8));
+      byte [ ] base64Bytes = Base64.decode(mUri.getBytes(StandardCharsets.UTF_8), Base64.DEFAULT);
 
       bitmap = BitmapFactory.decodeByteArray(base64Bytes, 0, base64Bytes.length);
     }

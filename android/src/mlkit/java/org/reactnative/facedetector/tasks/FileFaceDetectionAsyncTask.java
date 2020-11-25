@@ -100,8 +100,10 @@ public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, Void> {
     mRNFaceDetector = detectorForOptions(mOptions, mContext);
 
     try {
-      ExifInterface exif = new ExifInterface(mPath);
-      mOrientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
+      if (!mIsBase64) {
+        ExifInterface exif = new ExifInterface(mPath);
+        mOrientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
+      }
     } catch (IOException e) {
       Log.e(ERROR_TAG, "Reading orientation from file `" + mPath + "` failed.", e);
     }

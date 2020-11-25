@@ -924,5 +924,7 @@ const RNCamera = requireNativeComponent('RNCamera', Camera, {
     onSubjectAreaChanged: true,
     renderToHardwareTextureAndroid: true,
     testID: true,
+    cameraViewDimensions: true,
+    detectedImageInEvent: true
   },
 });

@@ -43,7 +43,7 @@ public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, SparseArra
   private RNFaceDetector mRNFaceDetector;
 
   public FileFaceDetectionAsyncTask(Context context, ReadableMap options, Promise promise) {
-    mIsBase64 = options.getString("format") == "base64";
+    mIsBase64 = "base64".equals(options.getString("format"));
     mUri = options.getString("uri");
     mPromise = promise;
     mOptions = options;
@@ -57,6 +57,8 @@ public class FileFaceDetectionAsyncTask extends AsyncTask<Void, Void, SparseArra
       cancel(true);
       return;
     }
+
+    Log.d("GENERAL_FACE_DETECTION", mIsBase64 + "");
 
     if (!mIsBase64) {
       Uri uri = Uri.parse(mUri);
